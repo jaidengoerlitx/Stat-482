@@ -1,0 +1,172 @@
+---
+title: "Untitled"
+author: "Jaiden Goerlitz"
+date: "2023-03-19"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+## Loading packages 
+library(tidyverse)
+library(readr)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+```
+
+Explatory Data Analysis
+
+First, we will load the data.
+
+```{r}
+data1 <- read.csv("C:\\Users\\19goe\\Documents\\Spring 2023\\Stat 482\\Stat-482-Project\\Data\\SpotifyAudioFeaturesApril2019.csv")
+view(data1)
+```
+
+Next, we want to see the distribution of poularity for the entire dataset. 
+
+```{r}
+popularity <- data1$popularity
+hist(popularity)
+```
+First, since the distribution of the popularity in the data is so skewed we will create new dataframes. In the first dataframe we will randomly sample 100 songs for each popularity range of: 0-10, 11-20, 21-30, 31-40, 41-50, 51-60, 61-70, 71-80, 81-90, 91-100. 
+
+```{r}
+
+# Create an empty data frame to store the sampled data
+sampled_data <- data.frame()
+
+# Loop through each popularity range and add a random sample of 100 songs to the new data frame
+for (i in 0:9) {
+  # Filter the original data frame for songs with popularity score within the current range
+  filtered_data <- data1[data1$popularity >= i*10 & data1$popularity < (i+1)*10,]
+  
+  # Check if the number of songs in the filtered data is at least 100
+  if (nrow(filtered_data) >= 100) {
+    # Take a random sample of 100 songs from the filtered data
+    sampled_songs <- filtered_data[sample(nrow(filtered_data), 100),]
+    
+    # Add the sampled songs to the new data frame
+    sampled_data <- rbind(sampled_data, sampled_songs)
+  }
+  else {
+    # If there are fewer than 100 songs in the filtered data, add all of them to the new data frame
+    sampled_data <- rbind(sampled_data, filtered_data)
+  }
+}
+
+# Now you can use the "sampled_data" data frame for further analysis
+
+```
+
+
+```{r}
+view(sampled_data)
+```
+
+```{r}
+vars_to_plot <- setdiff(names(sampled_data), c("acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "time_signature", "valence"))
+
+```
+
+```{r}
+library(corrplot)
+
+# Assume your sampled data frame is called "sampled_data"
+# Select the columns to include in the correlation plot
+columns <- c("popularity", "acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "time_signature", "valence")
+
+# Calculate the correlation matrix
+corr_matrix <- cor(sampled_data[columns])
+
+# Plot the correlation matrix
+corrplot(corr_matrix, method = "circle", type = "upper", order = "hclust", col = colorRampPalette(c("#3366FF", "#FFFFFF", "#FF3333"))(200), addrect = 4)
+
+```
+
+We also tried several other sampling methods. The distribution of a songs popularity is so much higher for the score 0-10. We found the proportions of each popularity score range and based our sample sizes for each range on those proportions. They are follows:    
+
+We decided for this dataframe that songs that are "popular" will have a score greater than or equal to 60. We will keep all of the the songs that have a score greater than 60 and randomly sample score ranges 0-9, 10-19, 20-29, 30-39, 40-49, 50-69 based on the proportions of each range from the original dataset. 
+
+```{r}
+# Assume your Spotify data is stored in a data frame called "spotify_data"
+
+# Define the popularity score ranges
+popularity_ranges <- seq(0, 100, by = 10)
+
+# Group the popularity scores into bins
+popularity_bins <- cut(data1$popularity, breaks = popularity_ranges, right = FALSE)
+
+# Calculate the proportion of songs in each bin
+popularity_proportions <- prop.table(table(popularity_bins))
+
+# Print the results
+cat("Popularity range\tProportion\n")
+cat("------------------------------\n")
+for (i in 1:length(popularity_proportions)) {
+  cat(paste0("[", popularity_ranges[i], ", ", popularity_ranges[i+1]), ")\t\t", round(popularity_proportions[i] * 100, 2), "%\n")
+}
+
+```
+
+
+```{r}
+# Define the sample sizes for each popularity range
+sample_sizes <- c(292, 170, 170, 138, 98, 77, 0, 0, 0, 0)
+
+# Create an empty data frame to store the sampled data
+sampled_data2 <- data.frame()
+
+# Loop through each popularity range and sample the songs
+for (i in 1:length(sample_sizes)) {
+  # Extract the songs with the current popularity range
+  current_songs <- data1[data1$popularity >= ((i-1)*10) & data1$popularity < (i*10), ]
+  
+  # If the current popularity range has a sample size of 0, just append the current_songs to sampled_data
+  if (sample_sizes[i] == 0) {
+    sampled_data2 <- rbind(sampled_data2, current_songs)
+  } else {
+    # Otherwise, randomly sample the specified number of songs and append them to sampled_data
+    current_sample <- current_songs[sample(nrow(current_songs), sample_sizes[i]), ]
+    sampled_data2 <- rbind(sampled_data2, current_sample)
+  }
+}
+
+# Print the number of songs in each popularity range for the original data and the sampled data
+cat("Original data:\n")
+cat(table(cut(data1$popularity, breaks = seq(0, 100, by = 10), right = FALSE)), "\n")
+cat("Sampled data:\n")
+cat(table(cut(sampled_data2$popularity, breaks = seq(0, 100, by = 10), right = FALSE)), "\n")
+
+```
+```{r}
+view(sampled_data2)
+```
+
+```{r}
+library(corrplot)
+
+# Assume your sampled data frame is called "sampled_data"
+# Select the columns to include in the correlation plot
+columns <- c("popularity", "acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "time_signature", "valence")
+
+# Calculate the correlation matrix
+corr_matrix <- cor(sampled_data2[columns])
+
+# Plot the correlation matrix
+corrplot(corr_matrix, method = "circle", type = "upper", order = "hclust", col = colorRampPalette(c("#3366FF", "#FFFFFF", "#FF3333"))(200), addrect = 4)
+```
+
+```{r}
+# Load the corrplot package
+library(corrplot)
+
+# Compute the correlation matrix for the features of interest
+features <- c("acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "time_signature", "valence", "popularity")
+cor_matrix <- cor(sampled_data2[, features])
+
+# Create a correlation plot with the "ellipse" method for highlighting high correlations
+corrplot(cor_matrix, method = "ellipse", type = "upper", tl.col = "black", tl.srt = 45)
+
+```
+
